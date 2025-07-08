@@ -27,16 +27,16 @@ con = duckdb.connect()
 con.register("a", df_A)
 con.register("bt", df_BT)
 
-# DuckDB matrix multiplication using array_inner_product with explicit casting
+# DuckDB matrix multiplication using list_sum for dot product calculation
 start_duck = time.perf_counter()
 result_df = con.execute("""
 SELECT
   a.row_id AS row,
   bt.col_id AS col,
-  array_inner_product(
-    CAST([a.a1, a.a2, a.a3] AS DOUBLE[]),
-    CAST([bt.b1, bt.b2, bt.b3] AS DOUBLE[])
-  ) AS value
+  list_sum(list_apply(
+    list_zip([a.a1, a.a2, a.a3], [bt.b1, bt.b2, bt.b3]), 
+    x -> x[1] * x[2]
+  )) AS value
 FROM a
 CROSS JOIN bt
 ORDER BY row, col
@@ -60,7 +60,7 @@ time_np = end_np - start_np
 # Plot result matrices
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 axes[0].imshow(duckdb_result, cmap='Blues', interpolation='nearest')
-axes[0].set_title('DuckDB array_inner_product')
+axes[0].set_title('DuckDB list operations')
 axes[0].set_xticks(range(cols))
 axes[0].set_yticks(range(rows))
 
@@ -97,4 +97,4 @@ print("DuckDB result:\n", duckdb_result)
 print("NumPy result:\n", numpy_result)
 print("Match:", np.allclose(duckdb_result, numpy_result))
 print(f"NumPy einsum time: {time_np:.6f} seconds")
-print(f"DuckDB inner_product time: {time_duck:.6f} seconds")
+print(f"DuckDB list operations time: {time_duck:.6f} seconds")
